@@ -7,7 +7,6 @@ export default defineComponent({
   components: { ChatView },
 
   setup() {
-
     const vm = useChatViewModel()
 
     if (vm.init) {
@@ -23,7 +22,6 @@ export default defineComponent({
   <ChatView
     :models="models"
     :selectedModel="selectedModel"
-
     :modelLoadTimeMs="modelLoadTimeMs"
     :modelLoadProgress="modelLoadProgress"
     :isLoadingModel="isLoadingModel"
@@ -31,28 +29,20 @@ export default defineComponent({
     :isWarmingUp="isWarmingUp"
     :warmupTimeMs="warmupTimeMs"
     :loadedModelName="loadedModelName"
-
     :prompts="prompts"
     :selectedPrompt="selectedPrompt"
-
     :chatInput="chatInput"
     :inferences="inferences"
-
     :isRecording="isRecording"
     :isInferencing="isInferencing"
-
     @update:chatInput="chatInput = $event"
     @update:selectedModel="selectedModel = $event"
     @update:selectedPrompt="selectedPrompt = $event"
-
-    @updatePrompt="updatePrompt"   
-
+    @updatePrompt="updatePrompt"
     @loadModel="loadModel"
     @send="sendMessage"
-
     @startRecording="startRecording"
     @stopRecording="stopRecording"
-
-    @clearAll="clearAll"           
+    @clearAll="clearAll"
   />
 </template>

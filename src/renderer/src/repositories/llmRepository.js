@@ -16,7 +16,9 @@ export class LlmRepository {
 
     this.llm = await LlmInference.createFromOptions(genai, {
       baseOptions: { modelAssetPath: modelPath, delegate: 'gpu' },
-      maxTokens: 4096
+      maxTokens: 4096,
+      supportAudio: true,
+      maxNumImages: 5
     })
 
     const end = performance.now()
@@ -46,9 +48,9 @@ export class LlmRepository {
   }
 
   async dispose() {
-  if (!this.llm) return
+    if (!this.llm) return
 
-    await this.llm.close()   
+    await this.llm.close()
     this.llm = null
   }
 }

@@ -3,7 +3,6 @@ import { defineConfig } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 
-
 export default defineConfig({
   main: {
     resolve: {
@@ -27,7 +26,7 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [vue(), tailwindcss(),],
+    plugins: [vue(), tailwindcss()],
     build: {
       rollupOptions: {
         output: {

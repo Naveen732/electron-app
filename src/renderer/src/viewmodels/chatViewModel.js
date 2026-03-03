@@ -1,9 +1,7 @@
 import { ref, watch } from 'vue'
-import * as sdk from 'microsoft-cognitiveservices-speech-sdk'
 import { LlmRepository } from '../repositories/llmRepository'
 
 export function useChatViewModel() {
-
   const repository = new LlmRepository()
 
   const models = ref([
@@ -23,6 +21,10 @@ export function useChatViewModel() {
 
   const isWarmingUp = ref(false)
   const warmupTimeMs = ref(null)
+  const isRecording = ref(false)
+  let mediaRecorder = null
+  let audioChunks = []
+  let mediaStream = null
 
   watch(selectedModel, () => {
     isModelLoaded.value = loadedModelName.value === selectedModel.value.name
@@ -81,12 +83,10 @@ export function useChatViewModel() {
     isWarmingUp.value = false
   }
 
-
-
   const defaultPrompts = [
     {
-    label: 'Translate to Tamil',
-    template: `You are a professional translator.
+      label: 'Translate to Tamil',
+      template: `You are a professional translator.
 
 Task: Translate the given text to Tamil.
 
@@ -97,10 +97,10 @@ Rules:
 
 Text:
 `
-  },
-  {
-    label: 'Translate to Hindi',
-    template: `You are a professional translator.
+    },
+    {
+      label: 'Translate to Hindi',
+      template: `You are a professional translator.
 
 Task: Translate the given text to Hindi.
 
@@ -111,10 +111,10 @@ Rules:
 
 Text:
 `
-  },
-  {
-    label: 'Yoda Style',
-    template: `Rewrite the following sentence in Yoda’s speaking style.
+    },
+    {
+      label: 'Yoda Style',
+      template: `Rewrite the following sentence in Yoda’s speaking style.
 
 Rules:
 - Keep the same meaning
@@ -123,10 +123,10 @@ Rules:
 
 Sentence:
 `
-  },
-  {
-    label: 'Caesar Style',
-    template: `Rewrite the following sentence in the speaking style of Caesar from Planet of the Apes.
+    },
+    {
+      label: 'Caesar Style',
+      template: `Rewrite the following sentence in the speaking style of Caesar from Planet of the Apes.
 
 Rules:
 - Keep meaning
@@ -135,20 +135,15 @@ Rules:
 
 Sentence:
 `
-  }
+    }
   ]
 
-  const prompts = ref(
-    JSON.parse(localStorage.getItem('prompts')) || defaultPrompts
-  )
+  const prompts = ref(JSON.parse(localStorage.getItem('prompts')) || defaultPrompts)
 
   const selectedPrompt = ref(null)
 
   function updatePrompt(updatedPrompt) {
-
-    const index = prompts.value.findIndex(
-      p => p.label === updatedPrompt.label
-    )
+    const index = prompts.value.findIndex((p) => p.label === updatedPrompt.label)
 
     if (index !== -1) {
       prompts.value[index] = updatedPrompt
@@ -166,7 +161,6 @@ Sentence:
   const isInferencing = ref(false)
 
   function buildPrompt(text) {
-
     if (!selectedPrompt.value) {
       return `<start_of_turn>user
 ${text}
@@ -183,7 +177,6 @@ ${text}
   }
 
   async function sendMessage() {
-
     if (!chatInput.value.trim()) return
     if (!isModelLoaded.value || isInferencing.value || isWarmingUp.value) return
 
@@ -212,79 +205,59 @@ ${text}
     inferences.value = []
   }
 
-
-
-  const isRecording = ref(false)
-  let recognizer = null
-
   async function startRecording() {
-    
-  const { token, region } = await window.azureAPI.getToken()
+    if (isRecording.value) return
+    if (!isModelLoaded.value) return
 
-  if (isRecording.value) return
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
+      mediaRecorder = new MediaRecorder(mediaStream)
+      audioChunks = []
 
-  if (!token || !region) {
-    console.error('❌ Azure Speech token/region missing')
-    return
-  }
-
-  isRecording.value = true
-
-  try {
-
-    const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(token, region)
-    speechConfig.speechRecognitionLanguage = 'en-US'
-
-    const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput()
-
-    if (!audioConfig) {
-      console.error('❌ No microphone detected')
-      isRecording.value = false
-      return
-    }
-
-    recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig)
-
-    recognizer.recognizing = (_, e) => {
-      chatInput.value = e.result.text
-    }
-
-    recognizer.startContinuousRecognitionAsync(
-
-      () => {
-        console.log('🎤 Mic started')
-      },
-
-      (err) => {
-        console.error('🎤 Mic start failed:', err)
-        recognizer?.close()
-        recognizer = null
-        isRecording.value = false
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data)
       }
 
-    )
+      mediaRecorder.onstop = async () => {
+        isRecording.value = false
 
-  } catch (err) {
-    console.error('🎤 Mic crash:', err)
-    isRecording.value = false
+        const webmBlob = new Blob(audioChunks, { type: 'audio/webm' })
+
+        const arrayBuffer = await webmBlob.arrayBuffer()
+
+        const audioCtx = new AudioContext()
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+
+        isInferencing.value = true
+
+        const result = await repository.generate([
+          '<start_of_turn>user\n',
+          'Transcribe the spoken words exactly. Output only the text.\n',
+          { audioSource: audioBuffer },
+          '\n<end_of_turn>\n<start_of_turn>model\n'
+        ])
+
+        chatInput.value = result.response.trim()
+
+        await sendMessage()
+
+        mediaStream.getTracks().forEach((t) => t.stop())
+        isInferencing.value = false
+      }
+
+      mediaRecorder.start()
+      isRecording.value = true
+    } catch (err) {
+      console.error('Mic error:', err)
+      isRecording.value = false
+    }
   }
-}
-
 
   function stopRecording() {
-
-  if (!recognizer) return
-
-  recognizer.stopContinuousRecognitionAsync(() => {
-    recognizer.close()
-    recognizer = null
-    isRecording.value = false
-
-  })
-}
-
-
+    if (!mediaRecorder) return
+    mediaRecorder.stop()
+  }
 
   return {
     models,
@@ -302,17 +275,16 @@ ${text}
 
     prompts,
     selectedPrompt,
-    updatePrompt,   
+    updatePrompt,
 
     chatInput,
     inferences,
     sendMessage,
     clearAll,
     isInferencing,
-
-    startRecording,
-    stopRecording,
+    loadedModelName,
     isRecording,
-    loadedModelName
+    startRecording,
+    stopRecording
   }
 }

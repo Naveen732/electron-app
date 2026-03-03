@@ -2,13 +2,12 @@
 
 An Electron desktop application built with Vue that supports:
 
-* Offline LLM inference (Gemma / TranslateGemma)
-* Real-time Speech-to-Text using Azure
-* Prompt-based AI transformations
-* Local model loading with warmup
+- Offline LLM inference (Gemma / TranslateGemma)
+- Real-time Speech-to-Text using Azure
+- Prompt-based AI transformations
+- Local model loading with warmup
 
 ---
-
 
 ---
 
@@ -85,5 +84,5 @@ npm run build:linux
 
 ## Notes
 
-* Microphone permission is required for Speech-to-Text
-* Do not commit the `.env` file
+- Microphone permission is required for Speech-to-Text
+- Do not commit the `.env` file

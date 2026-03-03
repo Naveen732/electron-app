@@ -1,11 +1,8 @@
-import { app, BrowserWindow, protocol, Menu, ipcMain } from 'electron'
+import { app, BrowserWindow, protocol, Menu } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
-import dotenv from 'dotenv'
-
-dotenv.config()
 
 app.commandLine.appendSwitch('enable-unsafe-webgpu')
 app.commandLine.appendSwitch('enable-gpu-rasterization')
@@ -19,8 +16,7 @@ protocol.registerSchemesAsPrivileged([
       standard: true,
       secure: true,
       supportFetchAPI: true,
-      corsEnabled: true,
-      
+      corsEnabled: true
     }
   }
 ])
@@ -36,9 +32,8 @@ function createWindow() {
       sandbox: false,
       autoHideMenuBar: true
     }
-    
   })
-  
+
   Menu.setApplicationMenu(null)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -105,24 +100,6 @@ app.whenReady().then(() => {
       return new Response(null, { status: 500 })
     }
   })
-  ipcMain.handle('azure:getToken', async () => {
-  const region = process.env.AZURE_SPEECH_REGION
-  const key = process.env.AZURE_SPEECH_KEY
-
-  const response = await fetch(
-    `https://${region}.api.cognitive.microsoft.com/sts/v1.0/issueToken`,
-    {
-      method: 'POST',
-      headers: {
-        'Ocp-Apim-Subscription-Key': key
-      }
-    }
-  )
-
-  const token = await response.text()
-
-  return { token, region }
-})
 
   createWindow()
 })
