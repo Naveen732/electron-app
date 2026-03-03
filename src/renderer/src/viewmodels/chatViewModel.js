@@ -154,8 +154,6 @@ Sentence:
     localStorage.setItem('prompts', JSON.stringify(prompts.value))
   }
 
-  /* ---------------- CHAT ---------------- */
-
   const chatInput = ref('')
   const inferences = ref([])
   const isInferencing = ref(false)
